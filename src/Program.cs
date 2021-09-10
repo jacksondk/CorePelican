@@ -1,6 +1,7 @@
 ﻿using System;
 using Markdig;
 using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 
 namespace CorePelican
 {
@@ -27,11 +28,31 @@ namespace CorePelican
 
 
             var document = Markdig.Markdown.Parse(string.Join("\n", articleLines));
+            foreach (var link in document.Descendants<LinkInline>())
+                Console.WriteLine(link.Url);
 
-            TraverseDocument(document);
+            
 
+            var template = 
+@"<html><head>
+<title>Hello</title>
+</head>
+<body>
+@Model.Content
+</body>
+</html>
+";
+            RazorEngineCore.RazorEngine engine = new RazorEngineCore.RazorEngine();
+            RazorEngineCore.IRazorEngineCompiledTemplate razorEngineCompiledTemplate = engine.Compile(template);
 
-            // Console.WriteLine(document.ToHtml());
+            string result = razorEngineCompiledTemplate.Run(
+                new
+                {
+                    Content = document.ToHtml(),
+                }
+                );
+            Console.WriteLine(result);
+
         }
 
         private static void TraverseDocument(Markdig.Syntax.ContainerBlock container)
@@ -45,6 +66,7 @@ namespace CorePelican
                     Console.WriteLine("Going down");
                     TraverseDocument((ContainerBlock)block);
                 }
+
                 if (block is LinkReferenceDefinition)
                 {
                     var link = (LinkReferenceDefinition)block;
