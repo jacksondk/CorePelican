@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
@@ -8,10 +10,11 @@ namespace CorePelican
     class Program
     {
 
-        static void ParseContent(string filename)
+        static Article ParseContent(string filename)
         {
-            var content = System.IO.File.ReadAllLines(filename);
+            var content = File.ReadAllLines(filename);
 
+            var dict = new Dictionary<string, string>();
             int lineIndex = 0;
             while (string.IsNullOrWhiteSpace(content[lineIndex]) is false)
             {
@@ -20,64 +23,49 @@ namespace CorePelican
                 var key = parts[0];
                 var value = string.Join(':', parts.AsSpan().Slice(1).ToArray());
 
-                Console.WriteLine($"Got {key} with value {value}");
+                dict.Add(key, value);
+
                 lineIndex++;
             }
 
             var articleLines = content.AsSpan().Slice(lineIndex + 1).ToArray();
 
-
             var document = Markdig.Markdown.Parse(string.Join("\n", articleLines));
-            foreach (var link in document.Descendants<LinkInline>())
-                Console.WriteLine(link.Url);
-
             
+            // Finding links
+            //foreach (var link in document.Descendants<LinkInline>())
+            //    Console.WriteLine(link.Url);
 
-            var template = 
-@"<html><head>
-<title>Hello</title>
-</head>
-<body>
-@Model.Content
-</body>
-</html>
-";
+            return new Article
+            {
+                Title = dict["Title"],
+                HtmlContent = document.ToHtml()
+            };
+        }
+
+        static void WriteArticle(Article article)
+        {
+
             RazorEngineCore.RazorEngine engine = new RazorEngineCore.RazorEngine();
+            var template = File.ReadAllText("template/article.html");
             RazorEngineCore.IRazorEngineCompiledTemplate razorEngineCompiledTemplate = engine.Compile(template);
 
             string result = razorEngineCompiledTemplate.Run(
                 new
                 {
-                    Content = document.ToHtml(),
+                    Title = article.Title,
+                    Content = article.HtmlContent
                 }
                 );
             Console.WriteLine(result);
 
         }
 
-        private static void TraverseDocument(Markdig.Syntax.ContainerBlock container)
-        {
-            Console.WriteLine("There are {0} blocks", container.Count);
-            foreach (Block block in container)
-            {
-                Console.WriteLine(block.GetType().ToString());
-                if (block is ContainerBlock)
-                {
-                    Console.WriteLine("Going down");
-                    TraverseDocument((ContainerBlock)block);
-                }
-
-                if (block is LinkReferenceDefinition)
-                {
-                    var link = (LinkReferenceDefinition)block;
-                    Console.WriteLine($"Found link Label: {link.Label} Title: {link.Title} Url: {link.Url}");
-                }
-            }
-        }
 
         static void Main(string[] args)
         {
-            ParseContent(args[0]);
+            var article = ParseContent(args[0]);
+            WriteArticle(article);
         }
     }
 }
