@@ -29,10 +29,22 @@ namespace CorePelican
 
                 lineIndex++;
             }
+            while (string.IsNullOrWhiteSpace(content[lineIndex]) is true)
+            {
+                lineIndex++;
+            }
+            var firstLineInDocument = lineIndex;
+            while (string.IsNullOrWhiteSpace(content[lineIndex]) is false)
+            {
+                lineIndex++;
+            }
+            var lastLineOfFirstParagraph = lineIndex;
 
-            var articleLines = content.AsSpan().Slice(lineIndex + 1).ToArray();
-
-            var document = Markdig.Markdown.Parse(string.Join("\n", articleLines));
+            var articleLines = content.AsSpan().Slice(firstLineInDocument).ToArray();
+            var firstParagraph = content.AsSpan().Slice(firstLineInDocument, lastLineOfFirstParagraph - firstLineInDocument).ToArray();
+                       
+            var document = Markdown.Parse(string.Join("\n", articleLines));
+            var topDoc = Markdown.Parse(string.Join("\n", firstParagraph));
 
             // Finding links
             //foreach (var link in document.Descendants<LinkInline>())
@@ -43,7 +55,8 @@ namespace CorePelican
             {
                 Title = dict["Title"],
                 TimeStamp = parsedDate,
-                HtmlContent = document.ToHtml()
+                HtmlContent = document.ToHtml(),
+                TopHtmlContent = topDoc.ToHtml(),                
             };
         }
 
@@ -51,8 +64,9 @@ namespace CorePelican
         {
             private RazorEngine _engine;
             private IRazorEngineCompiledTemplate _compiledTemplate;
+            private IRazorEngineCompiledTemplate _compiledLayoutTemplate;
 
-            public ArticleTransformer()
+            private ArticleTransformer()
             {
                 
             }
@@ -61,47 +75,93 @@ namespace CorePelican
             {
                 var transformer = new ArticleTransformer();
                 transformer._engine = new RazorEngineCore.RazorEngine();
-                var template = File.ReadAllText(Path.Combine(configuration.TemplatePath, "article.html"));
+                var layoutTemplate = File.ReadAllText(Path.Combine(configuration.TemplatePath, "layout.cshtml"));
+                var template = File.ReadAllText(Path.Combine(configuration.TemplatePath, "article.cshtml"));
                 transformer._compiledTemplate = transformer._engine.Compile(template);
+                transformer._compiledLayoutTemplate = transformer._engine.Compile(layoutTemplate);
                 return transformer;
             }
 
-            public void WriteArticle(string outputFileName, Article article, Configuration conf)
+            public string GenerateArticleContent(Article article)
             {
-                string result = _compiledTemplate.Run(
+                string content = _compiledTemplate.Run(
                     new
                     {
                         Title = article.Title,
-                        Content = article.HtmlContent
+                        HtmlContent = article.HtmlContent,
+                        Date = article.TimeStamp.ToString("yyyy-MM-dd")
                     }
                     );
-                File.WriteAllText(outputFileName, result);
+                return _compiledLayoutTemplate.Run(
+                    new
+                    {
+                        Title = article.Title,
+                        Content = content
+                    });
             }
         }
 
-        static void WriteArticle(string outputFileName, Article article, Configuration conf)
+        public class MainPageTransformer
         {
-            RazorEngineCore.RazorEngine engine = new RazorEngineCore.RazorEngine();
-            var template = File.ReadAllText("template/article.html");
-            RazorEngineCore.IRazorEngineCompiledTemplate razorEngineCompiledTemplate = engine.Compile(template);
+            private RazorEngine _engine;
+            private IRazorEngineCompiledTemplate _compiledTemplate;
+            private IRazorEngineCompiledTemplate _compiledLayoutTemplate;
 
-            string result = razorEngineCompiledTemplate.Run(
-                new
-                {
-                    Title = article.Title,
-                    Content = article.HtmlContent
-                }
-                );
-            Console.WriteLine(result);
-
+            static public MainPageTransformer SetupTemplate(Configuration configuration)
+            {
+                var transformer = new MainPageTransformer();
+                transformer._engine = new RazorEngineCore.RazorEngine();
+                var layoutTemplate = File.ReadAllText(Path.Combine(configuration.TemplatePath, "layout.cshtml"));
+                var template = File.ReadAllText(Path.Combine(configuration.TemplatePath, "articles.cshtml"));
+                transformer._compiledTemplate = transformer._engine.Compile(template);
+                transformer._compiledLayoutTemplate = transformer._engine.Compile(layoutTemplate);
+                return transformer;
+            }
+        
+            public string GenerateArticleContent(IEnumerable<Article> articles)
+            {
+                string content = _compiledTemplate.Run(
+                    new
+                    {
+                        Articles = articles,
+                    }
+                    );
+                return _compiledLayoutTemplate.Run(
+                    new
+                    {
+                        Title = "Articles",
+                        Content = content
+                    });
+            }
         }
 
+
+        //public class PageTransformer
+        //{
+        //    private RazorEngine _engine;
+        //    private IRazorEngineCompiledTemplate _layoutTemplate;
+
+        //    public PageTransformer(Configuration configuration)
+        //    {
+        //        _engine = new RazorEngine();
+        //        var layoutTemplate = File.ReadAllText(Path.Combine(configuration.TemplatePath, "layout.cshtml"));
+        //        _layoutTemplate = _engine.Compile(layoutTemplate);
+        //    }
+
+        //    public string DoLayout(string title, string content)
+        //    {
+        //        return _layoutTemplate.Run(new
+        //        {
+        //            Content = content,
+        //            Title = title
+        //        });
+        //    }
+        //}
         public class Configuration
         {
             public string ArticlePath { get; set; }
             public string StaticFilesPath { get; set; }
             public string TemplatePath { get; set; }
-
             public string OutputPath { get; set; }
         }
 
@@ -120,6 +180,8 @@ namespace CorePelican
             {
                 Directory.CreateDirectory(config.OutputPath);
             }
+
+            //var htmlCreator = new PageTransformer(config);
             var articleCreator = ArticleTransformer.SetupTemplate(config);
             foreach(var article in articles)
             {
@@ -132,10 +194,15 @@ namespace CorePelican
                 var totalPath = Path.Combine(config.OutputPath, ymdPath);
                 if (Directory.Exists(totalPath) is false)
                     Directory.CreateDirectory(totalPath);
-                var outputFileName = Path.Combine(totalPath, htmlFileName);
-                articleCreator.WriteArticle(outputFileName, article, config);
+                var articleOutputFileName = Path.Combine(totalPath, htmlFileName);
+
+                File.WriteAllText(articleOutputFileName, articleCreator.GenerateArticleContent(article));
             }
-                        
+
+            var mainCreator = MainPageTransformer.SetupTemplate(config);
+            var mainpage = mainCreator.GenerateArticleContent(articles);
+            var outputFileName = Path.Combine(config.OutputPath, "index.html");
+            File.WriteAllText(outputFileName, mainpage);
         }
     }
 }
