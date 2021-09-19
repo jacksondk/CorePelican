@@ -1,4 +1,6 @@
-﻿<h1>@Model.Title</h1>
+﻿@inherits RazorEngineCore.RazorEngineTemplateBase<CorePelican.ArticleModel>
+
+<h1>@Model.Title</h1>
 
 @Model.HtmlContent
 

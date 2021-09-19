@@ -1,8 +1,12 @@
-﻿<html>
+﻿@inherits RazorEngineCore.RazorEngineTemplateBase<CorePelican.GlobalModel>
+
+<html>
 <head>
     <title>@Model.Title</title>
 </head>
 <body>
     @Model.Content
+
+    @Model.TagCloudHtml
 </body>
 </html>

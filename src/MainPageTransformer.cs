@@ -11,34 +11,26 @@ namespace CorePelican
     public class MainPageTransformer
     {
         private RazorEngine _engine;
-        private IRazorEngineCompiledTemplate _compiledTemplate;
-        private IRazorEngineCompiledTemplate _compiledLayoutTemplate;
+        private IRazorEngineCompiledTemplate<MainPageModel> _compiledTemplate;        
 
         static public MainPageTransformer SetupTemplate(Configuration configuration)
         {
             var transformer = new MainPageTransformer();
-            transformer._engine = new RazorEngineCore.RazorEngine();
-            var layoutTemplate = File.ReadAllText(Path.Combine(configuration.TemplatePath, "layout.cshtml"));
+            transformer._engine = new RazorEngineCore.RazorEngine();            
             var template = File.ReadAllText(Path.Combine(configuration.TemplatePath, "articles.cshtml"));
-            transformer._compiledTemplate = transformer._engine.Compile(template);
-            transformer._compiledLayoutTemplate = transformer._engine.Compile(layoutTemplate);
+            transformer._compiledTemplate = transformer._engine.Compile<MainPageModel>(template);
             return transformer;
+
         }
 
-        public string GenerateArticleContent(IEnumerable<Article> articles)
+        public string GenerateArticleContent(MainPageModel model)
         {
-            string content = _compiledTemplate.Run(
-                new
-                {
-                    Articles = articles,
-                }
-                );
-            return _compiledLayoutTemplate.Run(
-                new
-                {
-                    Title = "Articles",
-                    Content = content
-                });
+            return _compiledTemplate.Run(instance => instance.Model = model);
         }
+    }
+
+    public class MainPageModel : RazorEngineTemplateBase
+    {
+        public IEnumerable<Article> Articles;
     }
 }

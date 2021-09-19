@@ -6,7 +6,7 @@ namespace CorePelican
     public class ArticleTransformer
     {
         private RazorEngine _engine;
-        private IRazorEngineCompiledTemplate _compiledTemplate;
+        private IRazorEngineCompiledTemplate<ArticleModel> _compiledTemplate;
         private IRazorEngineCompiledTemplate _compiledLayoutTemplate;
 
         private ArticleTransformer()
@@ -17,31 +17,25 @@ namespace CorePelican
         static public ArticleTransformer SetupTemplate(Configuration configuration)
         {
             var transformer = new ArticleTransformer();
-            transformer._engine = new RazorEngineCore.RazorEngine();
+            transformer._engine = new RazorEngine();
             var layoutTemplate = File.ReadAllText(Path.Combine(configuration.TemplatePath, "layout.cshtml"));
             var template = File.ReadAllText(Path.Combine(configuration.TemplatePath, "article.cshtml"));
-            transformer._compiledTemplate = transformer._engine.Compile(template);
+            transformer._compiledTemplate = transformer._engine.Compile<ArticleModel>(template);
             transformer._compiledLayoutTemplate = transformer._engine.Compile(layoutTemplate);
             return transformer;
         }
 
-        public string GenerateArticleContent(Article article)
+        public string GenerateArticleContent(ArticleModel model)
         {
-            string content = _compiledTemplate.Run(
-                new
-                {
-                    Title = article.Title,
-                    HtmlContent = article.HtmlContent,
-                    Date = article.TimeStamp.ToString("yyyy-MM-dd")
-                }
-                );
-            return _compiledLayoutTemplate.Run(
-                new
-                {
-                    Title = article.Title,
-                    Content = content
-                });
+            return _compiledTemplate.Run(instance => instance.Model = model);            
         }
     }
 
+    public class ArticleModel : RazorEngineTemplateBase
+    {
+        public string Title;
+        public string HtmlContent;
+        public string Date;
+        public GlobalModel Global;
+    }
 }

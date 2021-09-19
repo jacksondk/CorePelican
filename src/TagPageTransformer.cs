@@ -11,35 +11,26 @@ namespace CorePelican
     public class TagPageTransformer
     {
         private RazorEngine _engine;
-        private IRazorEngineCompiledTemplate _compiledTemplate;
-        private IRazorEngineCompiledTemplate _compiledLayoutTemplate;
+        private IRazorEngineCompiledTemplate<TagPageModel> _compiledTemplate;        
 
         static public TagPageTransformer SetupTemplate(Configuration configuration)
         {
             var transformer = new TagPageTransformer();
             transformer._engine = new RazorEngineCore.RazorEngine();
-            var layoutTemplate = File.ReadAllText(Path.Combine(configuration.TemplatePath, "layout.cshtml"));
             var template = File.ReadAllText(Path.Combine(configuration.TemplatePath, "tagindex.cshtml"));
-            transformer._compiledTemplate = transformer._engine.Compile(template);
-            transformer._compiledLayoutTemplate = transformer._engine.Compile(layoutTemplate);
+            transformer._compiledTemplate = transformer._engine.Compile<TagPageModel>(template);
             return transformer;
         }
 
-        public string GenerateArticleContent(string tagname, IEnumerable<Article> articles)
+        public string GenerateArticleContent(TagPageModel model)
         {
-            string content = _compiledTemplate.Run(
-                new
-                {
-                    TagName = tagname,
-                    Articles = articles,
-                }
-                );
-            return _compiledLayoutTemplate.Run(
-                new
-                {
-                    Title = $"Articles tagged {tagname}",
-                    Content = content
-                });
+            return _compiledTemplate.Run(instance => instance.Model = model);                
         }
+    }
+
+    public class TagPageModel : RazorEngineTemplateBase
+    {
+        public string TagName;
+        public IEnumerable<Article> Articles;
     }
 }

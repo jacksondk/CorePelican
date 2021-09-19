@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
@@ -15,7 +16,7 @@ namespace CorePelican
         {
             var configFile = File.ReadAllText(args[0]);
             var config = System.Text.Json.JsonSerializer.Deserialize<Configuration>(configFile);
-
+            var globalModel = new GlobalModel();
             var files = Directory.GetFiles(config.ArticlePath, "*.md");
             var articles = files.Select(f =>
             {
@@ -26,6 +27,8 @@ namespace CorePelican
             {
                 Directory.CreateDirectory(config.OutputPath);
             }
+
+            var pageTransformer = GlobalLayoutTransformer.SetupTemplate(config);
 
             // Make tag statistics
             var tagStatistics = new Dictionary<string, List<Article>>();
@@ -43,12 +46,33 @@ namespace CorePelican
             if (Directory.Exists(tagPath) is false)
                 Directory.CreateDirectory(tagPath);
             var tagIndexCreator = TagPageTransformer.SetupTemplate(config);
+            StringBuilder tagCloudBuilder = new StringBuilder();
             foreach (var tag in tagStatistics)
             {
-                var htmlFileName = Path.Combine(tagPath, $"{tag.Key}.html");
-                File.WriteAllText(htmlFileName,
-                    tagIndexCreator.GenerateArticleContent(tag.Key, tag.Value));
+                tagCloudBuilder.Append($"<span><a href=\"{tagPath}/{tag.Key}.html\">{tag.Key} ({tag.Value.Count})</a></span>");
             }
+            var tagCloud = tagCloudBuilder.ToString();
+
+            foreach (var tag in tagStatistics)
+            {
+
+                var htmlFileName = Path.Combine(tagPath, $"{tag.Key}.html");
+                var tagPageContent = tagIndexCreator.GenerateArticleContent(
+                    new TagPageModel
+                    {
+                        TagName = tag.Key,
+                        Articles = tag.Value
+                    });
+                GlobalModel pageModel = new GlobalModel
+                {
+                    Content = tagPageContent,
+                    TagCloudHtml = tagCloud,
+                    Title = tag.Key,
+                };
+
+                File.WriteAllText(htmlFileName, pageTransformer.GeneratePage(pageModel));
+            }            
+
 
             // Pages
             var articleCreator = ArticleTransformer.SetupTemplate(config);
@@ -59,15 +83,34 @@ namespace CorePelican
                     Directory.CreateDirectory(totalPath);
                 var articleOutputFileName = Path.Combine(totalPath, article.HtmlFileName);
 
-                File.WriteAllText(articleOutputFileName, articleCreator.GenerateArticleContent(article));
+                GlobalModel pageModel = new GlobalModel
+                {
+                    Content = articleCreator.GenerateArticleContent(
+                        new ArticleModel
+                        {
+                            Date = article.TimeStamp.ToString("yyyy-MM-dd"),
+                            HtmlContent = article.HtmlContent,
+                            Title = article.Title,
+                        }),
+                    TagCloudHtml = tagCloud,
+                    Title = article.Title
+                };
+                File.WriteAllText(articleOutputFileName, pageTransformer.GeneratePage(pageModel));
             }
 
             var mainCreator = MainPageTransformer.SetupTemplate(config);
-            var mainpage = mainCreator.GenerateArticleContent(articles);
+            var mainpage = mainCreator.GenerateArticleContent(new MainPageModel
+            {
+                Articles = articles
+            });
             var outputFileName = Path.Combine(config.OutputPath, "index.html");
-            File.WriteAllText(outputFileName, mainpage);
+            File.WriteAllText(outputFileName, pageTransformer.GeneratePage(new GlobalModel
+            {
+                Content = mainpage,
+                TagCloudHtml = tagCloud,
+                Title = "Main page"
+            }));
 
-            // Tag cloud
             // Main tags page
             // Page for each tag
         }
