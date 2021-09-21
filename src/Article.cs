@@ -16,6 +16,7 @@ namespace CorePelican
                 return Title
                     .Replace(' ', '-')
                     .Replace("?", "")
+                    .Replace("#", "")
                     .ToLower() + ".html";
             }
         }
@@ -25,6 +26,20 @@ namespace CorePelican
             get
             {
                 return TimeStamp.ToString("yyyy/MM/dd");
+            }
+        }
+
+        public string IsoDate
+        {
+            get { return TimeStamp.ToString("yyyy-MM-dd"); }
+        }
+
+
+        public String TotalPath
+        {
+            get
+            {
+                return "/" + DatePath + "/" + HtmlFileName;
             }
         }
 

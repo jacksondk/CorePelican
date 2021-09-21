@@ -3,10 +3,39 @@
 <html>
 <head>
     <title>@Model.Title</title>
+    <meta charset="utf-8" />
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400italic,400,700' rel='stylesheet' type='text/css'>
+    <link href="/css/mytheme.css" rel="stylesheet">
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
+    <script src="https://code.jquery.com/jquery-latest.js" type="text/javascript"></script>
+    <link href="/css/prettify.css" rel="stylesheet" />
+    <link href="/css/myprettify.css" rel="stylesheet" />
+    <script src="/js/prettify.js" type="text/javascript"></script>
+    <script src="/js/lang-ml.js" type="text/javascript"></script>
 </head>
 <body>
-    @Model.Content
-
-    @Model.TagCloudHtml
+    <div id="header" class="content1">
+        <div class="content2">
+            <div class="main-column">
+                <h1 id="sitename"><a href="/">scicomp.dk</a></h1>
+            </div>
+            <div class="right-column"></div>
+        </div>
+    </div>
+    <div class="content1">
+        <div class="content2">
+            <div class="main-column">
+                <div id="mainconent" class="main-column">
+                    @Model.Content
+                </div>
+                <div class="right-column">
+                    @Model.TagCloudHtml
+                </div>
+            </div>
+            <div class="right-column"></div>
+        </div>
+    </div>
 </body>
 </html>

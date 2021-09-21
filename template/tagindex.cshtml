@@ -1,6 +1,10 @@
-﻿<h1>Articles tagged: @Model.TagName</h1>
+﻿@inherits RazorEngineCore.RazorEngineTemplateBase<CorePelican.TagPageModel>
 
-@foreach (var article in @Model.Articles)
-{
-    <h1>@article.Title</h1>    
-}
+<h1>Articles tagged: @Model.TagName</h1>
+
+<ul>
+    @foreach (var article in @Model.Articles)
+    {
+        <li><a href="@article.TotalPath"> @article.IsoDate @article.Title </a></li>
+    }
+</ul>

@@ -1,6 +1,33 @@
 {
   "ArticlePath": "c:/projects/pelicanwww/content",
+  "PagePath": "c:/projects/pelicanwww/page",
   "TemplatePath": "c:/projects/CorePelican/template",
   "StaticFilesPath": "c:/projects/pelicanwww/static",
-  "OutputPath":  "c:/tmp/output"
+  "OutputPath": "c:/tmp/output",
+  "StaticContentDirectories": [
+    {
+      "Source": "c:/projects/pelicanwww/content/extra",
+      "Destination": "."
+    },
+    {
+      "Source": "c:/projects/pelicanwww/content/js",
+      "Destination": "js"
+    },
+    {
+      "Source": "c:/projects/pelicanwww/content/downloads",
+      "Destination": "downloads"
+    },
+    {
+      "Source": "c:/projects/pelicanwww/content/docs",
+      "Destination": "docs"
+    },
+    {
+      "Source": "c:/projects/pelicanwww/content/java",
+      "Destination": "java"
+    },
+    {
+      "Source": "c:/projects/pelicanwww/mytheme/static",
+      "Destination": "."
+    }
+  ]
 }

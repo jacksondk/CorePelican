@@ -1,7 +1,9 @@
-﻿
+﻿@inherits RazorEngineCore.RazorEngineTemplateBase<CorePelican.MainPageModel>
 
 @foreach (var article in @Model.Articles)
 {
-  <h1>@article.Title</h1>
-  <p>@article.TopHtmlContent</p>
+    <h1>@article.Title</h1>
+    <p>Published @article.TimeStamp.ToString("yyyy-MM-dd")</p>
+    <p>@article.TopHtmlContent</p>
+    <p><a href="@article.TotalPath">Read more</a></p>
 }
