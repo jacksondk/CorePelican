@@ -26,6 +26,10 @@
       "Destination": "java"
     },
     {
+      "Source": "c:/projects/pelicanwww/content/images",
+      "Destination": "images"
+    },
+    {
       "Source": "c:/projects/pelicanwww/mytheme/static",
       "Destination": "."
     }

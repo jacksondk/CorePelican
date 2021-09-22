@@ -26,15 +26,16 @@
     </div>
     <div class="content1">
         <div class="content2">
-            <div class="main-column">
-                <div id="mainconent" class="main-column">
+            <div id="maincontent" class="main-column">
+                <section id="conent" class="container">
                     @Model.Content
-                </div>
-                <div class="right-column">
-                    @Model.TagCloudHtml
-                </div>
+                </section>
             </div>
-            <div class="right-column"></div>
+            <div class="right-column">
+                <h2>Pages</h2>
+                <h2>Tags</h2>
+                @Model.TagCloudHtml
+            </div>            
         </div>
     </div>
 </body>

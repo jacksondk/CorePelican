@@ -2,8 +2,8 @@
 
 @foreach (var article in @Model.Articles)
 {
-    <h1>@article.Title</h1>
-    <p>Published @article.TimeStamp.ToString("yyyy-MM-dd")</p>
-    <p>@article.TopHtmlContent</p>
-    <p><a href="@article.TotalPath">Read more</a></p>
+    <h1 class="entry-title">@article.Title</h1>
+    <div class="entry-info">Published @article.TimeStamp.ToString("yyyy-MM-dd")</div>
+    <div class="entry-content">@article.TopHtmlContent</div>
+    <div class="read-more"><a href="@article.TotalPath">Read more</a></div>
 }
