@@ -13,6 +13,9 @@ namespace CorePelican
         private RazorEngine _engine;
         private IRazorEngineCompiledTemplate<GlobalModel> _compiledLayoutTemplate;
 
+        public string PagesHtml { get; internal set; }
+        public string TagCloudHtml { get; internal set; }
+
         static public GlobalLayoutTransformer SetupTemplate(Configuration configuration)
         {
             var transformer = new GlobalLayoutTransformer();
@@ -24,6 +27,8 @@ namespace CorePelican
 
         public string GeneratePage(GlobalModel model)
         {
+            if (PagesHtml is not null) model.PagesHtml = PagesHtml;
+            if (TagCloudHtml is not null) model.TagCloudHtml = TagCloudHtml;
             return _compiledLayoutTemplate.Run(instance => instance.Model = model);
         }
     }

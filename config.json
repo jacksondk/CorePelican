@@ -1,6 +1,6 @@
 {
   "ArticlePath": "c:/projects/pelicanwww/content",
-  "PagePath": "c:/projects/pelicanwww/page",
+  "PagePath": "c:/projects/pelicanwww/content/pages",
   "TemplatePath": "c:/projects/CorePelican/template",
   "StaticFilesPath": "c:/projects/pelicanwww/static",
   "OutputPath": "c:/tmp/output",

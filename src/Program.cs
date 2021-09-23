@@ -25,6 +25,11 @@ namespace CorePelican
             {
                 return ArticleParser.ParseContent(f);
             });
+            var pages = Directory.GetFiles(config.PagePath, "*.md")
+                .Select(f =>
+                {
+                    return ArticleParser.ParseContent(f);
+                });
 
             if (Directory.Exists(config.OutputPath) is false)
             {
@@ -32,15 +37,18 @@ namespace CorePelican
             }
 
             var pageTransformer = GlobalLayoutTransformer.SetupTemplate(config);
-
+            
             Dictionary<string, List<Article>> tagStatistics = SortAfterTags(articles);
 
-            
+            string pageSectionHtml = CreatePageSectionHtml(config, pages);
             string tagCloudHtml = CreateTagCloudHtml(tagStatistics);
 
-            CreateTagPages(config, pageTransformer, tagStatistics, tagCloudHtml);
+            pageTransformer.PagesHtml = pageSectionHtml;
+            pageTransformer.TagCloudHtml = tagCloudHtml;
 
-            CreatePages(config, articles, pageTransformer, tagCloudHtml);
+            CreatePages(config, pages, pageTransformer);
+            CreateTagPages(config, pageTransformer, tagStatistics);
+            CreateArticles(config, articles, pageTransformer);
 
             
             foreach (var directory in config.StaticContentDirectories)
@@ -51,12 +59,10 @@ namespace CorePelican
             }
 
             CreateMainPage(config, articles, pageTransformer, tagCloudHtml);
-
-
-            // Main tags page
-            // Page for each tag
+         
         }
 
+        
         private static void CreateMainPage(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer, string tagCloudHtml)
         {
             var mainCreator = MainPageTransformer.SetupTemplate(config);
@@ -73,7 +79,31 @@ namespace CorePelican
             }));
         }
 
-        private static void CreatePages(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer, string tagCloudHtml)
+        private static void CreatePages(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer)
+        {
+            var articleCreator = ArticleTransformer.SetupTemplate(config);
+            var totalPath = Path.Combine(config.OutputPath, "pages");
+            if (Directory.Exists(totalPath) is false)
+                Directory.CreateDirectory(totalPath);
+            foreach (var article in articles)
+            {
+                var pageFileName = Path.Combine(totalPath, article.HtmlFileName);
+
+                GlobalModel pageModel = new GlobalModel
+                {
+                    Content = articleCreator.GenerateArticleContent(
+                        new ArticleModel
+                        {
+                            Date = article.TimeStamp.ToString("yyyy-MM-dd"),
+                            HtmlContent = article.HtmlContent,
+                            Title = article.Title,
+                        }),
+                    Title = article.Title
+                };
+                File.WriteAllText(pageFileName, pageTransformer.GeneratePage(pageModel));
+            }
+        }
+        private static void CreateArticles(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer)
         {
             var articleCreator = ArticleTransformer.SetupTemplate(config);
             foreach (var article in articles)
@@ -92,14 +122,13 @@ namespace CorePelican
                             HtmlContent = article.HtmlContent,
                             Title = article.Title,
                         }),
-                    TagCloudHtml = tagCloudHtml,
                     Title = article.Title
                 };
                 File.WriteAllText(articleOutputFileName, pageTransformer.GeneratePage(pageModel));
             }
         }
 
-        private static void CreateTagPages(Configuration config, GlobalLayoutTransformer pageTransformer, Dictionary<string, List<Article>> tagStatistics, string tagCloudHtml)
+        private static void CreateTagPages(Configuration config, GlobalLayoutTransformer pageTransformer, Dictionary<string, List<Article>> tagStatistics)
         {
             // Make tag index pages
             var tagPath = Path.Combine(config.OutputPath, "tag");
@@ -120,13 +149,28 @@ namespace CorePelican
                 GlobalModel pageModel = new GlobalModel
                 {
                     Content = tagPageContent,
-                    TagCloudHtml = tagCloudHtml,
                     Title = tag.Key,
                 };
 
                 File.WriteAllText(htmlFileName, pageTransformer.GeneratePage(pageModel));
             }
         }
+
+        private static string CreatePageSectionHtml(Configuration config, IEnumerable<Article> pages)
+        {
+            var pagesPath = Path.Combine(config.OutputPath, "pages");
+            if (Directory.Exists(pagesPath) is false)
+                Directory.CreateDirectory(pagesPath);
+
+            var html = new StringBuilder();
+            foreach (var page in pages)
+            {
+                var htmlFileName = $"/pages/{page.HtmlFileName}";
+                html.AppendLine($"<a href=\"{htmlFileName}\">{page.Title}</a><br/>");
+            }
+            return html.ToString();
+        }
+
 
         private static string CreateTagCloudHtml(Dictionary<string, List<Article>> tagStatistics)
         {

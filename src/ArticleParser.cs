@@ -48,6 +48,6 @@ namespace CorePelican
                 MarkDownTopContent = string.Join("\n", firstParagraph),
                 Tags = dict["Tags"].Split(",").Select(s => s.Trim()).ToHashSet()
             };
-        }
+        }        
     }
 }

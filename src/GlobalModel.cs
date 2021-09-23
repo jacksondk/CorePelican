@@ -9,6 +9,7 @@ namespace CorePelican
     public class GlobalModel : RazorEngineCore.RazorEngineTemplateBase
     {
         public string TagCloudHtml { get; set; }
+        public string PagesHtml { get; set; }
 
         public string Title { get; set; }
 
