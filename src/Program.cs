@@ -6,6 +6,10 @@ using System.Text;
 using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using RazorEngineCore;
 
 namespace CorePelican
@@ -59,10 +63,19 @@ namespace CorePelican
             }
 
             CreateMainPage(config, articles, pageTransformer, tagCloudHtml);
-         
+
+
+            WebHost.CreateDefaultBuilder(args)
+                .Configure(config => {
+                    var options = new DefaultFilesOptions();
+                    options.DefaultFileNames.Add("index.html");
+                    config.UseDefaultFiles(options);
+                    config.UseStaticFiles();
+                    
+                    })
+                .UseWebRoot(config.OutputPath).Build().Run();
         }
 
-        
         private static void CreateMainPage(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer, string tagCloudHtml)
         {
             var mainCreator = MainPageTransformer.SetupTemplate(config);
