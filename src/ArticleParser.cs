@@ -1,5 +1,4 @@
-﻿using Markdig;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -42,6 +41,7 @@ namespace CorePelican
             DateTime.TryParseExact(dict["Date"], "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate);
             return new Article
             {
+                FileName = Path.GetFileName(filename),
                 Title = dict["Title"],
                 TimeStamp = parsedDate,
                 MarkDownContent = string.Join("\n", articleLines),

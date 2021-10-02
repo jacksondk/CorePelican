@@ -4,21 +4,15 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Markdig;
-using Markdig.Syntax;
-using Markdig.Syntax.Inlines;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
-using RazorEngineCore;
 
 namespace CorePelican
 {
     class Program
     {
-
-        // Serve with python
-        // python -m http.server 8000
         static void Main(string[] args)
         {
             var configFile = File.ReadAllText(args[0]);
@@ -41,7 +35,7 @@ namespace CorePelican
             }
 
             var pageTransformer = GlobalLayoutTransformer.SetupTemplate(config);
-            
+
             Dictionary<string, List<Article>> tagStatistics = SortAfterTags(articles);
 
             string pageSectionHtml = CreatePageSectionHtml(config, pages);
@@ -54,7 +48,7 @@ namespace CorePelican
             CreateTagPages(config, pageTransformer, tagStatistics);
             CreateArticles(config, articles, pageTransformer);
 
-            
+
             foreach (var directory in config.StaticContentDirectories)
             {
                 var source = directory.Source;
@@ -64,16 +58,27 @@ namespace CorePelican
 
             CreateMainPage(config, articles, pageTransformer, tagCloudHtml);
 
+            StartWebServer(args, config);
+            Console.WriteLine("Server runs - any key to stop and exit");
+            Console.ReadKey();
+            _webHost.StopAsync().Wait();
+        }
 
-            WebHost.CreateDefaultBuilder(args)
-                .Configure(config => {
-                    var options = new DefaultFilesOptions();
-                    options.DefaultFileNames.Add("index.html");
-                    config.UseDefaultFiles(options);
-                    config.UseStaticFiles();
-                    
-                    })
-                .UseWebRoot(config.OutputPath).Build().Run();
+        static IWebHost _webHost;
+        private static void StartWebServer(string[] args, Configuration config)
+        {
+            _webHost = WebHost.CreateDefaultBuilder(args)
+                            .Configure(config =>
+                            {
+                                var options = new DefaultFilesOptions();
+                                options.DefaultFileNames.Add("index.html");
+                                config.UseDefaultFiles(options);
+                                config.UseStaticFiles();
+
+                            })
+                            .UseWebRoot(config.OutputPath).Build();
+            
+            _webHost.Run();
         }
 
         private static void CreateMainPage(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer, string tagCloudHtml)
@@ -94,6 +99,7 @@ namespace CorePelican
 
         private static void CreatePages(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer)
         {
+            Article.AllArticles = articles.ToList();
             var articleCreator = ArticleTransformer.SetupTemplate(config);
             var totalPath = Path.Combine(config.OutputPath, "pages");
             if (Directory.Exists(totalPath) is false)
@@ -118,6 +124,7 @@ namespace CorePelican
         }
         private static void CreateArticles(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer)
         {
+            Article.AllArticles = articles.ToList();
             var articleCreator = ArticleTransformer.SetupTemplate(config);
             foreach (var article in articles)
             {
