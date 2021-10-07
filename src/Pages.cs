@@ -54,6 +54,21 @@ namespace CorePelican
             return this;
         }
 
+        public string CreatePageSectionHtml()
+        {
+            var pagesPath = Path.Combine(_configuration.OutputPath, "pages");
+            if (Directory.Exists(pagesPath) is false)
+                Directory.CreateDirectory(pagesPath);
+
+            var html = new StringBuilder();
+            foreach (var page in _articles)
+            {
+                var htmlFileName = $"/pages/{page.HtmlFileName}";
+                html.AppendLine($"<a href=\"{htmlFileName}\">{page.Title}</a><br/>");
+            }
+            return html.ToString();
+        }
+
         public IEnumerator<Article> GetEnumerator()
         {
             return _articles.GetEnumerator();
