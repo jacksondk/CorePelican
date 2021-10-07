@@ -17,51 +17,60 @@ namespace CorePelican
         {
             var configFile = File.ReadAllText(args[0]);
             var config = System.Text.Json.JsonSerializer.Deserialize<Configuration>(configFile);
-            var globalModel = new GlobalModel();
-            var files = Directory.GetFiles(config.ArticlePath, "*.md");
-            var articles = files.Select(f =>
-            {
-                return ArticleParser.ParseContent(f);
-            });
-            var pages = Directory.GetFiles(config.PagePath, "*.md")
-                .Select(f =>
-                {
-                    return ArticleParser.ParseContent(f);
-                });
+            var pages = new Pages(config);
+            var tags = new Tags(config);
 
-            if (Directory.Exists(config.OutputPath) is false)
-            {
-                Directory.CreateDirectory(config.OutputPath);
-            }
+            IEnumerable<Article> articles = LoadArticles(config);
+            pages.LoadPages(config);
+
+            PrepareOutputDirectory(config);
+
+            tags.MakeStatistics(articles);
+            string tagCloudHtml = tags.CreateTagCloudHtml();
+            string pageSectionHtml = CreatePageSectionHtml(config, pages);
+
 
             var pageTransformer = GlobalLayoutTransformer.SetupTemplate(config);
-
-            Dictionary<string, List<Article>> tagStatistics = SortAfterTags(articles);
-
-            string pageSectionHtml = CreatePageSectionHtml(config, pages);
-            string tagCloudHtml = CreateTagCloudHtml(tagStatistics);
-
             pageTransformer.PagesHtml = pageSectionHtml;
             pageTransformer.TagCloudHtml = tagCloudHtml;
 
-            CreatePages(config, pages, pageTransformer);
-            CreateTagPages(config, pageTransformer, tagStatistics);
+            pages.CreatePages(pageTransformer);
+            tags.CreateTagPages(pageTransformer);
             CreateArticles(config, articles, pageTransformer);
 
+            CreateStaticContent(config);
 
+            CreateMainPage(config, articles, pageTransformer, tagCloudHtml);
+
+            StartWebServer(args, config);
+        }
+
+        private static void CreateStaticContent(Configuration config)
+        {
             foreach (var directory in config.StaticContentDirectories)
             {
                 var source = directory.Source;
                 var destination = Path.Combine(config.OutputPath, directory.Destination);
                 DirectoryCopy(source, destination, true);
             }
+        }
 
-            CreateMainPage(config, articles, pageTransformer, tagCloudHtml);
+        private static void PrepareOutputDirectory(Configuration config)
+        {
+            if (Directory.Exists(config.OutputPath) is false)
+            {
+                Directory.CreateDirectory(config.OutputPath);
+            }
+        }
 
-            StartWebServer(args, config);
-            Console.WriteLine("Server runs - any key to stop and exit");
-            Console.ReadKey();
-            _webHost.StopAsync().Wait();
+        private static IEnumerable<Article> LoadArticles(Configuration config)
+        {
+            var files = Directory.GetFiles(config.ArticlePath, "*.md");
+            var articles = files.Select(f =>
+            {
+                return ArticleParser.ParseContent(f);
+            });
+            return articles;
         }
 
         static IWebHost _webHost;
@@ -97,31 +106,31 @@ namespace CorePelican
             }));
         }
 
-        private static void CreatePages(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer)
-        {
-            Article.AllArticles = articles.ToList();
-            var articleCreator = ArticleTransformer.SetupTemplate(config);
-            var totalPath = Path.Combine(config.OutputPath, "pages");
-            if (Directory.Exists(totalPath) is false)
-                Directory.CreateDirectory(totalPath);
-            foreach (var article in articles)
-            {
-                var pageFileName = Path.Combine(totalPath, article.HtmlFileName);
+        //private static void CreatePages(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer)
+        //{
+        //    Article.AllArticles = articles.ToList();
+        //    var articleCreator = ArticleTransformer.SetupTemplate(config);
+        //    var totalPath = Path.Combine(config.OutputPath, "pages");
+        //    if (Directory.Exists(totalPath) is false)
+        //        Directory.CreateDirectory(totalPath);
+        //    foreach (var article in articles)
+        //    {
+        //        var pageFileName = Path.Combine(totalPath, article.HtmlFileName);
 
-                GlobalModel pageModel = new GlobalModel
-                {
-                    Content = articleCreator.GenerateArticleContent(
-                        new ArticleModel
-                        {
-                            Date = article.TimeStamp.ToString("yyyy-MM-dd"),
-                            HtmlContent = article.HtmlContent,
-                            Title = article.Title,
-                        }),
-                    Title = article.Title
-                };
-                File.WriteAllText(pageFileName, pageTransformer.GeneratePage(pageModel));
-            }
-        }
+        //        GlobalModel pageModel = new GlobalModel
+        //        {
+        //            Content = articleCreator.GenerateArticleContent(
+        //                new ArticleModel
+        //                {
+        //                    Date = article.TimeStamp.ToString("yyyy-MM-dd"),
+        //                    HtmlContent = article.HtmlContent,
+        //                    Title = article.Title,
+        //                }),
+        //            Title = article.Title
+        //        };
+        //        File.WriteAllText(pageFileName, pageTransformer.GeneratePage(pageModel));
+        //    }
+        //}
         private static void CreateArticles(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer)
         {
             Article.AllArticles = articles.ToList();
@@ -192,33 +201,33 @@ namespace CorePelican
         }
 
 
-        private static string CreateTagCloudHtml(Dictionary<string, List<Article>> tagStatistics)
-        {
-            StringBuilder tagCloudBuilder = new StringBuilder();
-            foreach (var tag in tagStatistics)
-            {
-                tagCloudBuilder.Append($"<span><a href=\"/tag/{tag.Key}.html\">{tag.Key} ({tag.Value.Count})</a></span>");
-            }
-            var tagCloud = tagCloudBuilder.ToString();
-            return tagCloud;
-        }
+        //private static string CreateTagCloudHtml(Dictionary<string, List<Article>> tagStatistics)
+        //{
+        //    StringBuilder tagCloudBuilder = new StringBuilder();
+        //    foreach (var tag in tagStatistics)
+        //    {
+        //        tagCloudBuilder.Append($"<span><a href=\"/tag/{tag.Key}.html\">{tag.Key} ({tag.Value.Count})</a></span>");
+        //    }
+        //    var tagCloud = tagCloudBuilder.ToString();
+        //    return tagCloud;
+        //}
 
-        private static Dictionary<string, List<Article>> SortAfterTags(IEnumerable<Article> articles)
-        {
-            // Make tag statistics
-            var tagStatistics = new Dictionary<string, List<Article>>();
-            foreach (var article in articles)
-            {
-                foreach (var tag in article.Tags)
-                {
-                    if (tagStatistics.ContainsKey(tag) == false)
-                        tagStatistics[tag] = new List<Article>();
-                    tagStatistics[tag].Add(article);
-                }
-            }
+        //private static Dictionary<string, List<Article>> SortAfterTags(IEnumerable<Article> articles)
+        //{
+        //    // Make tag statistics
+        //    var tagStatistics = new Dictionary<string, List<Article>>();
+        //    foreach (var article in articles)
+        //    {
+        //        foreach (var tag in article.Tags)
+        //        {
+        //            if (tagStatistics.ContainsKey(tag) == false)
+        //                tagStatistics[tag] = new List<Article>();
+        //            tagStatistics[tag].Add(article);
+        //        }
+        //    }
 
-            return tagStatistics;
-        }
+        //    return tagStatistics;
+        //}
 
         private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
         {
