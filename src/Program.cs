@@ -12,6 +12,7 @@ namespace CorePelican
     {
         static void Main(string[] args)
         {
+            
             var configFile = File.ReadAllText(args[0]);
             var config = System.Text.Json.JsonSerializer.Deserialize<Configuration>(configFile);
             var pages = new Pages(config);
@@ -40,6 +41,21 @@ namespace CorePelican
             CreateMainPage(config, articles, pageTransformer, tagCloudHtml);
 
             StartWebServer(args, config);
+
+            var test = new LinkChecker(new System.Uri("http://localhost:5000"));
+            var errors = test.FindErrors();            
+
+            System.Console.WriteLine("Found errors");
+            foreach(var error in errors)
+            {
+                System.Console.WriteLine(error);
+            }
+            
+            System.Console.WriteLine("Press enter to finish");
+            System.Console.ReadLine();
+            System.Threading.Tasks.Task stopWebHostTask = _webHost.StopAsync();
+            System.Console.WriteLine("Stopping web server");
+            stopWebHostTask.Wait();
         }
 
         private static void CreateStaticContent(Configuration config)
@@ -73,8 +89,9 @@ namespace CorePelican
 
                             })
                             .UseWebRoot(config.OutputPath).Build();
-
-            _webHost.Run();
+            
+            _webHost.RunAsync();
+            
         }
 
         private static void CreateMainPage(Configuration config, IEnumerable<Article> articles, GlobalLayoutTransformer pageTransformer, string tagCloudHtml)
