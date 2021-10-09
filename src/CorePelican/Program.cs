@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Markdig;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -45,13 +46,23 @@ namespace CorePelican
             var test = new LinkChecker(new System.Uri("http://localhost:5000"));
             var errors = test.FindErrors();            
 
-            System.Console.WriteLine("Found errors");
-            foreach(var error in errors)
+            System.Console.WriteLine("Links not found");
+            foreach(var error in errors.Where(e => e.type == LinkChecker.LinkErrorType.DOES_NOT_EXIST))
             {
                 System.Console.WriteLine(error);
             }
-            
-            System.Console.WriteLine("Press enter to finish");
+            System.Console.WriteLine("\nLinks not using httpS");
+            foreach (var error in errors.Where(e => e.type == LinkChecker.LinkErrorType.NOT_HTTPS))
+            {
+                System.Console.WriteLine(error);
+            }
+
+            System.Console.WriteLine("\n10 slowest links");
+            foreach (var timing in test.Statistics.OrderByDescending(s => s.Value).Take(10))
+            {
+                System.Console.WriteLine($"Page {timing.Key} took {timing.Value}ms to fetch (just the html)");
+            }
+            System.Console.WriteLine("\nPress enter to finish");
             System.Console.ReadLine();
             System.Threading.Tasks.Task stopWebHostTask = _webHost.StopAsync();
             System.Console.WriteLine("Stopping web server");

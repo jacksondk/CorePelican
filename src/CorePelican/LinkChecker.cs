@@ -1,6 +1,7 @@
 ﻿using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -15,6 +16,7 @@ namespace CorePelican
         private readonly Stack<LinkPair> _baseUrl = new Stack<LinkPair>();
         private readonly HtmlWeb htmlWeb = new HtmlWeb();
         private readonly string host;
+        private readonly Dictionary<Uri, long> timings = new Dictionary<Uri, long>();
 
         public LinkChecker(Uri baseUrl)
         {
@@ -22,15 +24,20 @@ namespace CorePelican
             host = baseUrl.Host;
         }
 
-        public record LinkError(string page, string link, string message);
+        public enum LinkErrorType
+        {
+            DOES_NOT_EXIST,
+            NOT_HTTPS
+        }
+        public record LinkError(string page, string link, LinkErrorType type);
         
-
+        public Dictionary<Uri,long> Statistics { get { return timings; } }
         public List<LinkError> FindErrors()
         {
             var errors = new List<LinkError>();
             var errorsFound = new Dictionary<Uri, Uri>();
             var alreadyChecked = new List<Uri>();
-            
+            var timer = new Stopwatch();
             while (_baseUrl.Any())
             {
                 var lookInto = _baseUrl.Pop();
@@ -42,9 +49,14 @@ namespace CorePelican
                 try
                 {
                     if (newPage.Scheme == "http" || newPage.Scheme == "https")
-                    {                        
+                    {
+                        timer.Reset(); 
+                        timer.Start();
                         var document = htmlWeb.Load(newPage);
-
+                        timer.Stop();
+                        timings.Add(newPage, timer.ElapsedMilliseconds);
+                        
+                        
                         if (newPage.Host == host)
                         {
                             FindPairs(newPage, document, "a", "href");
@@ -57,20 +69,23 @@ namespace CorePelican
                         {
                             if (newPage.Scheme != "https")
                             {
-                                errors.Add(new LinkError(lookInto.page.ToString(), lookInto.linkOnPage.ToString(), "Not https"));
+                                errors.Add(new LinkError(lookInto.page.ToString(), lookInto.linkOnPage.ToString(), LinkErrorType.NOT_HTTPS));
                             }
                         }
                     }
                 }
                 catch (WebException)
-                {
-                    Console.WriteLine($"Problem with {lookInto}");
-                    errors.Add(new LinkError(lookInto.page.ToString(), lookInto.linkOnPage.ToString(), "Unable to load"));
+                {                    
+                    errors.Add(new LinkError(lookInto.page.ToString(), 
+                        lookInto.linkOnPage.ToString(), 
+                        LinkErrorType.DOES_NOT_EXIST));
                 }
             }
 
             return errors;
         }
+
+
 
         void FindPairs(Uri newPage, HtmlDocument document, string tag, string attribute)
         {
