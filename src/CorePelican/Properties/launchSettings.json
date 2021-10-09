@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CorePelican": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Projects\\CorePelican\\config.json"
+    }
+  }
+}
